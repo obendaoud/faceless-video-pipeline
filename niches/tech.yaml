@@ -1,0 +1,61 @@
+name: Tech & Tutoriels
+description: Astuces tech, outils IA, productivité, reviews
+
+script:
+  language: fr
+  tone: "engageant, clair, dynamique, accessible"
+  hooks:
+    - "Question provocante sur un outil ou une technique"
+    - "Fait surprenant ou statistique tech"
+    - "Promesse de valeur immédiate"
+  cta_style: "Abonne-toi pour plus d'astuces tech"
+  forbidden:
+    - "jargon technique non expliqué"
+    - "affirmations non vérifiées"
+    - "promesses irréalistes"
+  max_scenes: 6
+  duration_target: "45-55 secondes"
+
+visuals:
+  style: "modern digital illustration, clean UI mockup, tech aesthetic, gradient background, minimal"
+  subjects:
+    - "interfaces logicielles"
+    - "appareils tech"
+    - "diagrammes conceptuels"
+    - "icônes et symboles tech"
+  color_palette: ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981"]
+  avoid: ["visages humains", "texte dans l'image", "logos de marque"]
+
+voice:
+  primary: fr-FR-HenriNeural
+  fallback: fr-FR-DeniseNeural
+  rate: "+5%"
+  pitch: "+0Hz"
+
+captions:
+  highlight_color: "&H0000FFFF"  # Jaune en ASS (BGR format)
+  base_color: "&H00FFFFFF"       # Blanc
+  outline_color: "&H00000000"    # Noir
+  font: Arial
+  font_size: 18
+  bold: true
+  outline_width: 3
+  words_per_group: 4
+  position_y: 85  # % depuis le haut
+
+music:
+  volume_normal: 0.15
+  volume_ducked: 0.04
+  fade_in: 0.5
+  fade_out: 1.0
+
+thumbnail:
+  style: "bold text overlay on gradient background"
+  text_color: white
+  shadow: true
+
+topics:
+  sources:
+    - reddit: ["technology", "artificial", "productivity"]
+    - rss: ["https://techcrunch.com/feed/"]
+  keywords: ["IA", "productivité", "gratuit", "outil", "astuce", "alternative"]

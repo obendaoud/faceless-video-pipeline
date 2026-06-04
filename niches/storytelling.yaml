@@ -1,0 +1,59 @@
+name: Storytelling & Histoires
+description: Histoires captivantes, anecdotes dramatiques, faits insolites
+
+script:
+  language: fr
+  tone: "narratif, suspense, émotionnel, immersif"
+  hooks:
+    - "Début in media res (au milieu de l'action)"
+    - "Question mystérieuse"
+    - "Fait incroyable mais vrai"
+  cta_style: "Like si cette histoire t'a surpris"
+  forbidden:
+    - "spoiler dans le hook"
+    - "ton monotone ou factuel"
+    - "conclusion prévisible"
+  max_scenes: 6
+  duration_target: "50-60 secondes"
+
+visuals:
+  style: "cinematic digital art, dramatic lighting, atmospheric, moody"
+  subjects:
+    - "scènes dramatiques"
+    - "paysages atmosphériques"
+    - "silhouettes mystérieuses"
+  color_palette: ["#dc2626", "#7c3aed", "#1e293b", "#f97316"]
+  avoid: ["visages reconnaissables", "scènes gore", "texte"]
+
+voice:
+  primary: fr-FR-HenriNeural
+  fallback: fr-FR-DeniseNeural
+  rate: "+0%"
+  pitch: "-3Hz"
+
+captions:
+  highlight_color: "&H000045FF"  # Rouge orangé
+  base_color: "&H00FFFFFF"
+  outline_color: "&H00000000"
+  font: Arial
+  font_size: 20
+  bold: true
+  outline_width: 3
+  words_per_group: 3
+  position_y: 85
+
+music:
+  volume_normal: 0.18
+  volume_ducked: 0.05
+  fade_in: 1.0
+  fade_out: 2.0
+
+thumbnail:
+  style: "dramatic with red/orange accents"
+  text_color: white
+  shadow: true
+
+topics:
+  sources:
+    - reddit: ["todayilearned", "interestingasfuck", "askreddit"]
+  keywords: ["incroyable", "mystère", "histoire", "secret", "personne ne sait"]

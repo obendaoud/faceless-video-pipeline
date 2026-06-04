@@ -1,0 +1,59 @@
+name: Finance & Business
+description: Investissement, side hustles, crypto, immobilier, épargne
+
+script:
+  language: fr
+  tone: "autoritaire mais accessible, concret, orienté action"
+  hooks:
+    - "Révélation financière surprenante"
+    - "Erreur courante que tout le monde fait"
+    - "Comparaison chiffrée avant/après"
+  cta_style: "Follow pour plus de conseils finance"
+  forbidden:
+    - "conseils d'investissement personnalisés"
+    - "garanties de rendement"
+    - "promesses de richesse rapide"
+  max_scenes: 6
+  duration_target: "45-55 secondes"
+
+visuals:
+  style: "clean financial infographic, modern flat design, dark premium background"
+  subjects:
+    - "graphiques et courbes"
+    - "billets et pièces stylisés"
+    - "tableaux de bord financiers"
+  color_palette: ["#10b981", "#059669", "#1e40af", "#f59e0b"]
+  avoid: ["visages humains", "logos de banques", "texte illisible"]
+
+voice:
+  primary: fr-FR-HenriNeural
+  fallback: fr-FR-DeniseNeural
+  rate: "+0%"
+  pitch: "-2Hz"
+
+captions:
+  highlight_color: "&H0000D7FF"  # Or/ambre
+  base_color: "&H00FFFFFF"
+  outline_color: "&H00000000"
+  font: Arial
+  font_size: 18
+  bold: true
+  outline_width: 3
+  words_per_group: 4
+  position_y: 85
+
+music:
+  volume_normal: 0.12
+  volume_ducked: 0.03
+  fade_in: 0.5
+  fade_out: 1.0
+
+thumbnail:
+  style: "premium dark with green accents"
+  text_color: white
+  shadow: true
+
+topics:
+  sources:
+    - reddit: ["personalfinance", "investing", "Fire"]
+  keywords: ["épargne", "investir", "erreur", "secret", "stratégie"]
