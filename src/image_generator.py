@@ -33,16 +33,21 @@ def generate_image(prompt: str, config: dict, output_path: str) -> str:
 def generate_all_images(
     scenes: list[dict], config: dict, output_dir: str
 ) -> list[str]:
+    import time
+
     os.makedirs(output_dir, exist_ok=True)
     paths = []
 
-    for scene in scenes:
+    for i, scene in enumerate(scenes):
         scene_num = scene["scene_number"]
         path = os.path.join(output_dir, f"scene_{scene_num:02d}.png")
 
         if os.path.exists(path):
             paths.append(path)
             continue
+
+        if i > 0:
+            time.sleep(12)
 
         generate_image(scene["image_prompt"], config, path)
         paths.append(path)

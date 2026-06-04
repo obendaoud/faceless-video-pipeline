@@ -1,4 +1,4 @@
-"""Script generation — multi-provider LLM with research grounding and niche awareness."""
+"""Script generation — storytelling-first approach with narrative arc."""
 
 import json
 import os
@@ -10,6 +10,7 @@ class Scene(BaseModel):
     scene_number: int
     narration: str
     image_prompt: str
+    emotion: str
     duration_hint: str
 
 
@@ -22,46 +23,78 @@ class VideoScript(BaseModel):
     cta: str
 
 
-SYSTEM_PROMPT = """Tu es un scénariste expert en contenu vidéo court format pour YouTube Shorts, TikTok et Instagram Reels.
+SYSTEM_PROMPT = """Tu es un SCÉNARISTE, pas un professeur. Tu écris des histoires courtes qui captivent en 50 secondes.
 
+=== TA SEULE RÈGLE ===
+Chaque vidéo raconte une HISTOIRE avec un arc narratif. JAMAIS une liste de faits.
+
+=== STRUCTURE NARRATIVE OBLIGATOIRE ===
+
+HOOK (Scene 1) — 5 sec
+→ Une phrase qui FORCE à rester. Pas une question générique. Une affirmation choquante, une situation concrète, un "tu" qui interpelle.
+→ Émotion : curiosité ou peur
+
+BUILD (Scenes 2-3) — 15 sec
+→ Tu MONTRES le problème. Pas "il existe un problème", mais une scène concrète qu'on VISUALISE.
+→ Le spectateur doit se dire "attends, quoi ??"
+→ Émotion : montée de tension
+
+CLIMAX (Scene 4) — 8 sec
+→ Le moment "oh merde". La révélation. Le retournement. Ce qu'on n'avait pas vu venir.
+→ Émotion : choc ou surprise
+
+RESOLUTION (Scenes 5-6) — 15 sec
+→ La solution ou la leçon. Concrète, actionnable. Pas de morale vague.
+→ Émotion : empowerment, on repart avec quelque chose
+
+=== STYLE D'ÉCRITURE ===
+- Tu parles comme un pote qui raconte un truc dingue, pas comme un prof
+- Phrases COURTES. 5-10 mots max. Rythme punchy.
+- "Tu" direct, pas "on" ou "il"
+- Zéro jargon non expliqué
+- Chaque phrase fait AVANCER l'histoire, jamais de remplissage
+- Si une phrase n'ajoute pas de tension ou d'émotion, SUPPRIME-LA
+
+=== ERREURS INTERDITES ===
+- "Saviez-vous que..." / "Imaginez..." / "Dans cet vidéo..." → INTERDIT. Commence IN MEDIA RES.
+- Lister des faits sans fil narratif → INTERDIT
+- Conclure par "voilà" / "maintenant vous savez" → INTERDIT. Finis sur un PUNCH.
+- Narration passive et descriptive → INTERDIT. Raconte, montre, fais ressentir.
+
+=== IMAGE PROMPTS ===
+- Style: {visual_style}
+- JAMAIS de texte dans l'image
+- Chaque image doit transmettre l'ÉMOTION de la scène, pas illustrer les mots
+- Pense cinéma : angles, lumière, ambiance. Pas clipart.
+
+=== CONTEXTE ===
 Niche: {niche_name}
-Ton: {tone}
 Langue: {language}
+Durée cible: {duration_target}
+Max scènes: {max_scenes}"""
 
-Règles:
-- Le hook (3-5 secondes) doit immédiatement captiver. Styles recommandés: {hook_styles}
-- Chaque scène dure 5-10 secondes de narration.
-- Le texte de narration doit être naturel, parlé, pas écrit. Phrases courtes.
-- Les image_prompt doivent décrire une illustration en anglais. Style: {visual_style}
-- Sujets visuels recommandés: {visual_subjects}
-- Éviter dans les visuels: {visual_avoid}
-- CTA style: {cta_style}
-- Total: {max_scenes} scènes pour {duration_target} de vidéo.
-- INTERDIT: {forbidden}
+USER_PROMPT = """Écris un script vidéo court format sur ce sujet :
 
-Tu dois aussi générer un titre YouTube accrocheur, une description avec hashtags, et des tags pertinents."""
-
-USER_PROMPT = """Crée un script vidéo court format sur le sujet suivant:
-
-**Sujet:** {topic}
+**{topic}**
 
 {research_context}
 
-Réponds UNIQUEMENT avec un JSON valide:
+Réponds UNIQUEMENT en JSON :
 {{
-  "title": "Titre accrocheur pour YouTube (max 100 chars)",
-  "description": "Description YouTube avec hashtags et CTA (max 300 chars)",
+  "title": "Titre accrocheur (max 80 chars, pas de emoji)",
+  "description": "Description YouTube avec hashtags (max 300 chars)",
   "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
-  "hook": "Phrase d'accroche captivante (3-5 sec)",
+  "hook": "La phrase d'accroche — doit CHOQUER ou INTRIGUER en 3 secondes",
   "scenes": [
     {{
       "scene_number": 1,
-      "narration": "Texte de narration parlé pour cette scène",
-      "image_prompt": "Detailed English image description: digital illustration of...",
-      "duration_hint": "5-8s"
+      "narration": "Texte parlé pour cette scène — COURT et PUNCHY",
+      "image_prompt": "English cinematic image description, no text in image, convey the EMOTION",
+      "emotion": "curiosity/tension/shock/fear/empowerment/relief",
+      "duration_hint": "5s"
     }}
   ],
-  "cta": "Call-to-action final engageant"
+  "cta": "Call-to-action final — pas de 'abonne-toi', finis sur un PUNCH"
 }}"""
 
 
@@ -71,21 +104,15 @@ def _build_prompts(topic: str, niche: dict, research: str) -> tuple[str, str]:
 
     system = SYSTEM_PROMPT.format(
         niche_name=niche.get("name", "Général"),
-        tone=script_cfg.get("tone", "engageant"),
         language=script_cfg.get("language", "fr"),
-        hook_styles=", ".join(script_cfg.get("hooks", ["Question provocante"])),
-        visual_style=vis_cfg.get("style", "modern digital illustration"),
-        visual_subjects=", ".join(vis_cfg.get("subjects", [])),
-        visual_avoid=", ".join(vis_cfg.get("avoid", [])),
-        cta_style=script_cfg.get("cta_style", "Abonne-toi"),
-        max_scenes=script_cfg.get("max_scenes", 6),
+        visual_style=vis_cfg.get("style", "cinematic digital art, dramatic lighting"),
         duration_target=script_cfg.get("duration_target", "45-55 secondes"),
-        forbidden=", ".join(script_cfg.get("forbidden", [])),
+        max_scenes=script_cfg.get("max_scenes", 6),
     )
 
     user = USER_PROMPT.format(
         topic=topic,
-        research_context=research if research else "(Pas de recherche disponible)",
+        research_context=research if research else "",
     )
 
     return system, user
@@ -99,9 +126,7 @@ def generate_script(
 ) -> VideoScript:
     system, user = _build_prompts(topic, niche, research_context)
 
-    if provider == "anthropic":
-        text = _call_anthropic(system, user, niche)
-    elif provider == "openai":
+    if provider == "openai":
         text = _call_openai(system, user, niche)
     else:
         text = _call_anthropic(system, user, niche)
