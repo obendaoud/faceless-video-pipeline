@@ -1,10 +1,12 @@
-"""Video assembly using pure FFmpeg — Ken Burns, ASS subtitles, music ducking."""
+"""Video assembly using FFmpeg + Pillow subtitle burn-in (no libass dependency)."""
 
+import json
 import os
-import subprocess
 import shutil
+import subprocess
 import tempfile
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
+import numpy as np
 
 
 ZOOMPAN_EFFECTS = [
@@ -53,6 +55,104 @@ def _build_music_ducking_filter(
     return f"volume='{ducked_vol}+({normal_vol}-{ducked_vol})*(1-({speech_expr}))':eval=frame"
 
 
+def _render_subtitle_frames(
+    words: list[dict],
+    video_width: int,
+    video_height: int,
+    fps: int,
+    duration: float,
+    output_dir: str,
+    niche_captions: dict | None = None,
+) -> str:
+    """Render subtitle overlay frames as transparent PNGs for FFmpeg overlay."""
+    cfg = niche_captions or {}
+    font_size = cfg.get("font_size", 52)
+    words_per_group = cfg.get("words_per_group", 4)
+    position_y_pct = cfg.get("position_y", 85)
+
+    try:
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
+    except OSError:
+        font = ImageFont.load_default(font_size)
+
+    groups = []
+    for i in range(0, len(words), words_per_group):
+        chunk = words[i : i + words_per_group]
+        groups.append({
+            "words": chunk,
+            "text": " ".join(w["word"] for w in chunk),
+            "start": float(chunk[0]["start"]),
+            "end": float(chunk[-1]["end"]),
+        })
+
+    total_frames = int(duration * fps)
+    os.makedirs(output_dir, exist_ok=True)
+
+    blank = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
+    blank_path = os.path.join(output_dir, "blank.png")
+    blank.save(blank_path)
+
+    frame_map = {}
+
+    for group in groups:
+        start_frame = int(group["start"] * fps)
+        end_frame = int(group["end"] * fps)
+
+        img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(img)
+
+        text = group["text"]
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+
+        pad_x, pad_y = 24, 14
+        box_w = text_w + pad_x * 2
+        box_h = text_h + pad_y * 2
+        box_x = (video_width - box_w) // 2
+        box_y = int(video_height * position_y_pct / 100) - box_h // 2
+
+        draw.rounded_rectangle(
+            [(box_x, box_y), (box_x + box_w, box_y + box_h)],
+            radius=14,
+            fill=(0, 0, 0, 170),
+        )
+
+        text_x = box_x + pad_x
+        text_y = box_y + pad_y
+
+        cursor_x = text_x
+        for wi, w in enumerate(group["words"]):
+            word = w["word"]
+            w_bbox = draw.textbbox((0, 0), word, font=font)
+            w_width = w_bbox[2] - w_bbox[0]
+
+            draw.text(
+                (cursor_x, text_y), word, font=font,
+                fill=(255, 255, 255, 255),
+                stroke_width=2, stroke_fill=(0, 0, 0, 255),
+            )
+            cursor_x += w_width
+
+            space_bbox = draw.textbbox((0, 0), " ", font=font)
+            cursor_x += space_bbox[2] - space_bbox[0]
+
+        frame_path = os.path.join(output_dir, f"sub_{start_frame:06d}.png")
+        img.save(frame_path)
+
+        for f_idx in range(start_frame, min(end_frame + 1, total_frames)):
+            frame_map[f_idx] = frame_path
+
+    concat_file = os.path.join(output_dir, "subs_concat.txt")
+    with open(concat_file, "w") as f:
+        for f_idx in range(total_frames):
+            path = frame_map.get(f_idx, blank_path)
+            f.write(f"file '{path}'\n")
+            f.write(f"duration {1/fps:.6f}\n")
+
+    return concat_file
+
+
 def assemble_video(
     image_paths: list[str],
     audio_path: str,
@@ -62,6 +162,8 @@ def assemble_video(
     music_path: str | None = None,
     speech_regions: list[tuple[float, float]] | None = None,
     niche_music: dict | None = None,
+    niche_captions: dict | None = None,
+    words: list[dict] | None = None,
 ) -> str:
     width = config.get("width", 1080)
     height = config.get("height", 1920)
@@ -119,6 +221,7 @@ def assemble_video(
             check=True,
         )
 
+        # Add audio (voice + optional music with ducking)
         if music_path and os.path.exists(music_path):
             ducking_filter = _build_music_ducking_filter(
                 speech_regions or [], normal_vol, ducked_vol
@@ -159,24 +262,46 @@ def assemble_video(
                 check=True,
             )
 
+        # Burn in subtitles using Pillow overlay (no libass needed)
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
 
-        ass_abs = os.path.abspath(ass_path)
-        escaped_ass = ass_abs.replace("\\", "/").replace(":", "\\:")
+        if words:
+            subs_dir = os.path.join(tmpdir, "subs")
+            subs_concat = _render_subtitle_frames(
+                words, width, height, fps, duration, subs_dir, niche_captions
+            )
 
-        subprocess.run(
-            [
-                "ffmpeg", "-y",
-                "-i", video_with_audio,
-                "-vf", f"ass='{escaped_ass}'",
-                "-c:v", "libx264", "-preset", "medium",
-                "-crf", "18",
-                "-c:a", "copy",
-                output_path,
-            ],
-            capture_output=True,
-            check=True,
-        )
+            subs_video = os.path.join(tmpdir, "subs.mp4")
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-f", "concat", "-safe", "0",
+                    "-i", subs_concat,
+                    "-c:v", "png",
+                    "-pix_fmt", "rgba",
+                    subs_video,
+                ],
+                capture_output=True,
+                check=True,
+            )
+
+            subprocess.run(
+                [
+                    "ffmpeg", "-y",
+                    "-i", video_with_audio,
+                    "-i", subs_video,
+                    "-filter_complex", "[0:v][1:v]overlay=0:0:shortest=1[outv]",
+                    "-map", "[outv]",
+                    "-map", "0:a",
+                    "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                    "-c:a", "copy",
+                    output_path,
+                ],
+                capture_output=True,
+                check=True,
+            )
+        else:
+            shutil.copy2(video_with_audio, output_path)
 
     return output_path
 
