@@ -7,6 +7,7 @@ Research → Script → Images → TTS → Captions (Whisper) → Assemblage FFm
 import os
 import sys
 import glob
+import json
 import random
 import yaml
 from datetime import datetime
@@ -232,6 +233,7 @@ def stage_captions(state: dict, niche: dict) -> dict:
     complete_stage(state, "captions", {
         "ass_path": result["ass_path"],
         "srt_path": result["srt_path"],
+        "words_json_path": os.path.join(captions_dir, "words.json"),
         "speech_regions": result["speech_regions"],
     })
     return state
@@ -257,6 +259,12 @@ def stage_assembly(state: dict, niche: dict) -> dict:
 
     video_config = {"width": 1080, "height": 1920, "fps": 30}
 
+    words_json = state["artifacts"].get("words_json_path")
+    words = None
+    if words_json and os.path.exists(words_json):
+        with open(words_json) as f:
+            words = json.load(f)
+
     console.print("[dim]Assemblage FFmpeg (Ken Burns + ASS subs + music ducking)...[/dim]")
     console.print("[dim]Ça peut prendre 1-3 minutes...[/dim]")
 
@@ -270,6 +278,8 @@ def stage_assembly(state: dict, niche: dict) -> dict:
             music_path=music_path,
             speech_regions=state["artifacts"].get("speech_regions"),
             niche_music=niche.get("music"),
+            words=words,
+            niche_captions=niche.get("captions"),
         )
     except Exception as e:
         fail_stage(state, "assembly", str(e))
