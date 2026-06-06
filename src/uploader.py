@@ -81,8 +81,12 @@ def upload_video(
     description: str,
     tags: list[str] | None = None,
     srt_path: str | None = None,
-    category_id: str = "28",  # Science & Technology
+    upload_config: dict | None = None,
 ) -> str | None:
+    cfg = upload_config or {}
+    category_id = cfg.get("category_id", "28")
+    privacy = cfg.get("privacy", "private")
+
     tokens = _load_tokens()
     if not tokens:
         print("YouTube non configuré. Lance: python -m src.uploader --setup")
@@ -99,7 +103,7 @@ def upload_video(
             "categoryId": category_id,
         },
         "status": {
-            "privacyStatus": "private",
+            "privacyStatus": privacy,
             "selfDeclaredMadeForKids": False,
         },
     }
@@ -138,7 +142,8 @@ def upload_video(
             video_id = resp.json()["id"]
 
             if srt_path and os.path.exists(srt_path):
-                _upload_captions(access_token, video_id, srt_path)
+                caption_lang = cfg.get("language", "fr")
+                _upload_captions(access_token, video_id, srt_path, caption_lang)
 
             return f"https://youtube.com/shorts/{video_id}"
 
@@ -152,7 +157,7 @@ def upload_video(
     return None
 
 
-def _upload_captions(access_token: str, video_id: str, srt_path: str) -> None:
+def _upload_captions(access_token: str, video_id: str, srt_path: str, language: str = "fr") -> None:
     with open(srt_path, "rb") as f:
         srt_data = f.read()
 
@@ -166,8 +171,8 @@ def _upload_captions(access_token: str, video_id: str, srt_path: str) -> None:
                     {
                         "snippet": {
                             "videoId": video_id,
-                            "language": "fr",
-                            "name": "Français",
+                            "language": language,
+                            "name": language,
                         }
                     }
                 ),

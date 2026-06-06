@@ -135,11 +135,12 @@ def stage_images(state: dict, niche: dict) -> dict:
     start_stage(state, "images")
     script = load_script(state["artifacts"]["script_path"])
 
+    vis_section = niche.get("visuals", {})
     vis_config = {
-        "model": "black-forest-labs/flux-schnell",
-        "width": 768,
-        "height": 1344,
-        "style": niche.get("visuals", {}).get("style", ""),
+        "model": vis_section.get("model", "black-forest-labs/flux-schnell"),
+        "width": vis_section.get("width", 768),
+        "height": vis_section.get("height", 1344),
+        "style": vis_section.get("style", ""),
     }
 
     console.print(f"[dim]Génération de {len(script.scenes)} images via Flux Schnell...[/dim]")
@@ -257,7 +258,13 @@ def stage_assembly(state: dict, niche: dict) -> dict:
     if music_path:
         console.print(f"[dim]Musique: {os.path.basename(music_path)}[/dim]")
 
-    video_config = {"width": 1080, "height": 1920, "fps": 30}
+    vid_section = niche.get("video", {})
+    video_config = {
+        "width": vid_section.get("width", 1080),
+        "height": vid_section.get("height", 1920),
+        "fps": vid_section.get("fps", 30),
+        "crf": vid_section.get("crf", 23),
+    }
 
     words_json = state["artifacts"].get("words_json_path")
     words = None
@@ -267,6 +274,8 @@ def stage_assembly(state: dict, niche: dict) -> dict:
 
     console.print("[dim]Assemblage FFmpeg (Ken Burns + ASS subs + music ducking)...[/dim]")
     console.print("[dim]Ça peut prendre 1-3 minutes...[/dim]")
+
+    scenes = [s.model_dump() for s in script.scenes]
 
     try:
         result = assemble_video(
@@ -280,6 +289,7 @@ def stage_assembly(state: dict, niche: dict) -> dict:
             niche_music=niche.get("music"),
             words=words,
             niche_captions=niche.get("captions"),
+            scenes=scenes,
         )
     except Exception as e:
         fail_stage(state, "assembly", str(e))
@@ -301,6 +311,8 @@ def stage_upload(state: dict, niche: dict) -> dict:
     start_stage(state, "upload")
     script = load_script(state["artifacts"]["script_path"])
 
+    upload_cfg = niche.get("upload", {})
+
     console.print("[dim]Upload YouTube en cours...[/dim]")
     try:
         url = upload_video(
@@ -309,6 +321,7 @@ def stage_upload(state: dict, niche: dict) -> dict:
             description=script.description,
             tags=script.tags,
             srt_path=state["artifacts"].get("srt_path"),
+            upload_config=upload_cfg,
         )
     except Exception as e:
         fail_stage(state, "upload", str(e))

@@ -47,7 +47,8 @@ def generate_all_images(
             continue
 
         if i > 0:
-            time.sleep(12)
+            rate_limit = config.get("rate_limit_seconds", 12)
+            time.sleep(rate_limit)
 
         generate_image(scene["image_prompt"], config, path)
         paths.append(path)

@@ -214,10 +214,12 @@ def assemble_video(
     niche_music: dict | None = None,
     niche_captions: dict | None = None,
     words: list[dict] | None = None,
+    scenes: list[dict] | None = None,
 ) -> str:
     width = config.get("width", 1080)
     height = config.get("height", 1920)
     fps = config.get("fps", 30)
+    crf = config.get("crf", 23)
 
     music_cfg = niche_music or {}
     normal_vol = music_cfg.get("volume_normal", 0.15)
@@ -225,8 +227,19 @@ def assemble_video(
     fade_out = music_cfg.get("fade_out", 1.0)
 
     duration = _get_audio_duration(audio_path)
-    scene_duration = duration / len(image_paths)
-    frames_per_scene = int(scene_duration * fps)
+
+    # If scene durations provided (from script), use those instead of uniform split
+    scene_durations = []
+    if scenes:
+        total_hint = sum(s.get("duration_hint", 0) for s in scenes)
+        if total_hint > 0:
+            for s in scenes:
+                ratio = s.get("duration_hint", duration / len(image_paths)) / total_hint
+                scene_durations.append(duration * ratio)
+        else:
+            scene_durations = [duration / len(image_paths)] * len(image_paths)
+    else:
+        scene_durations = [duration / len(image_paths)] * len(image_paths)
 
     with tempfile.TemporaryDirectory() as tmpdir:
         prepared = []
@@ -237,15 +250,17 @@ def assemble_video(
 
         scene_clips = []
         for i, img in enumerate(prepared):
+            sc_dur = scene_durations[i]
+            sc_frames = int(sc_dur * fps)
             clip_path = os.path.join(tmpdir, f"clip_{i:03d}.ts")
             effect = ZOOMPAN_EFFECTS[i % len(ZOOMPAN_EFFECTS)].format(
-                frames=frames_per_scene, w=width, h=height, fps=fps
+                frames=sc_frames, w=width, h=height, fps=fps
             )
 
             cmd = [
                 "ffmpeg", "-y", "-loop", "1", "-i", img,
                 "-vf", effect,
-                "-t", f"{scene_duration:.3f}",
+                "-t", f"{sc_dur:.3f}",
                 "-c:v", "libx264", "-preset", "fast",
                 "-pix_fmt", "yuv420p",
                 "-an", clip_path,
@@ -343,7 +358,7 @@ def assemble_video(
                     "-filter_complex", "[0:v][1:v]overlay=0:0:shortest=1[outv]",
                     "-map", "[outv]",
                     "-map", "0:a",
-                    "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                    "-c:v", "libx264", "-preset", "medium", "-crf", str(crf),
                     "-c:a", "copy",
                     output_path,
                 ],

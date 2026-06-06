@@ -16,7 +16,16 @@ script:
   max_scenes: 6
   duration_target: "50-60 secondes"
 
+llm:
+  model: claude-haiku-4-5-20251001
+  max_tokens: 2048
+  temperature: 0.9
+
 visuals:
+  model: black-forest-labs/flux-schnell
+  width: 768
+  height: 1344
+  rate_limit_seconds: 12
   style: "cinematic digital art, dramatic lighting, atmospheric, moody"
   subjects:
     - "scènes dramatiques"
@@ -49,6 +58,16 @@ music:
   volume_ducked: 0.05
   fade_in: 1.0
   fade_out: 2.0
+
+video:
+  crf: 21
+  fps: 30
+  width: 1080
+  height: 1920
+
+upload:
+  category_id: "24"
+  privacy: private
 
 thumbnail:
   style: "dramatic with red/orange accents"

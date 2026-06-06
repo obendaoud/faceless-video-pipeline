@@ -5,8 +5,8 @@ import json
 from faster_whisper import WhisperModel
 
 
-def transcribe_word_level(audio_path: str, language: str = "fr") -> list[dict]:
-    model = WhisperModel("base", device="cpu", compute_type="int8")
+def transcribe_word_level(audio_path: str, language: str = "fr", model_size: str = "base") -> list[dict]:
+    model = WhisperModel(model_size, device="cpu", compute_type="int8")
 
     segments, _ = model.transcribe(
         audio_path, language=language, word_timestamps=True
@@ -142,7 +142,9 @@ def generate_captions(
 ) -> dict:
     os.makedirs(output_dir, exist_ok=True)
 
-    words = transcribe_word_level(audio_path, language)
+    niche_cfg = niche_captions or {}
+    model_size = niche_cfg.get("whisper_model", "base")
+    words = transcribe_word_level(audio_path, language, model_size)
 
     words_json = os.path.join(output_dir, "words.json")
     with open(words_json, "w", encoding="utf-8") as f:
@@ -162,12 +164,13 @@ def generate_captions(
         words, os.path.join(output_dir, "captions.srt"), wpg
     )
 
+    silence_gap = niche_cfg.get("silence_gap", 0.5)
     speech_regions = []
     if words:
         region_start = words[0]["start"]
         region_end = words[0]["end"]
         for w in words[1:]:
-            if w["start"] - region_end < 0.5:
+            if w["start"] - region_end < silence_gap:
                 region_end = w["end"]
             else:
                 speech_regions.append((region_start, region_end))

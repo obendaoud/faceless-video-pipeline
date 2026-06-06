@@ -16,7 +16,16 @@ script:
   max_scenes: 6
   duration_target: "45-55 secondes"
 
+llm:
+  model: claude-haiku-4-5-20251001
+  max_tokens: 2048
+  temperature: 0.7
+
 visuals:
+  model: black-forest-labs/flux-schnell
+  width: 768
+  height: 1344
+  rate_limit_seconds: 12
   style: "clean financial infographic, modern flat design, dark premium background"
   subjects:
     - "graphiques et courbes"
@@ -49,6 +58,16 @@ music:
   volume_ducked: 0.03
   fade_in: 0.5
   fade_out: 1.0
+
+video:
+  crf: 23
+  fps: 30
+  width: 1080
+  height: 1920
+
+upload:
+  category_id: "22"
+  privacy: private
 
 thumbnail:
   style: "premium dark with green accents"

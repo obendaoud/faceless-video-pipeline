@@ -12,15 +12,17 @@ async def _edge_tts(text: str, voice: str, rate: str, pitch: str, output_path: s
     return output_path
 
 
-def _elevenlabs_tts(text: str, output_path: str) -> str:
+def _elevenlabs_tts(text: str, output_path: str, config: dict | None = None) -> str:
     api_key = os.environ.get("ELEVENLABS_API_KEY")
     if not api_key:
         raise RuntimeError("ELEVENLABS_API_KEY not set")
 
+    voice_id = (config or {}).get("elevenlabs_voice_id", "21m00Tcm4TlvDq8ikWAM")
+
     import httpx
 
     resp = httpx.post(
-        "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
+        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
         headers={"xi-api-key": api_key, "Content-Type": "application/json"},
         json={
             "text": text,
@@ -74,7 +76,7 @@ def generate_audio(
 
     if os.environ.get("ELEVENLABS_API_KEY"):
         try:
-            return _elevenlabs_tts(text, output_path)
+            return _elevenlabs_tts(text, output_path, cfg)
         except Exception:
             pass
 
