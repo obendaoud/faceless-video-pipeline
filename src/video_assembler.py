@@ -55,6 +55,34 @@ def _build_music_ducking_filter(
     return f"volume='{ducked_vol}+({normal_vol}-{ducked_vol})*(1-({speech_expr}))':eval=frame"
 
 
+def _find_font(size: int) -> ImageFont.FreeTypeFont:
+    """Auto-detect a bold font across platforms, falling back gracefully."""
+    import platform
+
+    candidates = []
+    if platform.system() == "Darwin":
+        candidates = [
+            "/System/Library/Fonts/Supplemental/Impact.ttf",
+            "/System/Library/Fonts/Helvetica.ttc",
+            "/Library/Fonts/Arial Bold.ttf",
+        ]
+    elif platform.system() == "Linux":
+        candidates = [
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+            "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
+        ]
+    else:
+        candidates = ["C:/Windows/Fonts/impact.ttf", "C:/Windows/Fonts/arialbd.ttf"]
+
+    for path in candidates:
+        if os.path.exists(path):
+            try:
+                return ImageFont.truetype(path, size)
+            except OSError:
+                continue
+    return ImageFont.load_default(size)
+
+
 def _render_subtitle_frames(
     words: list[dict],
     video_width: int,
@@ -64,23 +92,34 @@ def _render_subtitle_frames(
     output_dir: str,
     niche_captions: dict | None = None,
 ) -> str:
-    """Render subtitle overlay frames as transparent PNGs for FFmpeg overlay."""
+    """Render Hormozi-style subtitle overlays: centered, UPPERCASE, word-by-word yellow highlight."""
     cfg = niche_captions or {}
-    font_size = cfg.get("font_size", 52)
-    words_per_group = cfg.get("words_per_group", 4)
-    position_y_pct = cfg.get("position_y", 85)
+    font_size = cfg.get("font_size", 72)
+    words_per_group = cfg.get("words_per_group", 2)
+    position_y_pct = cfg.get("position_y", 45)
 
-    try:
-        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", font_size)
-    except OSError:
-        font = ImageFont.load_default(font_size)
+    # Parse highlight color — support hex (#FFD93D) or fall back to yellow
+    highlight_hex = cfg.get("highlight_color_hex", cfg.get("highlight_color", "#FFD93D"))
+    if isinstance(highlight_hex, str) and highlight_hex.startswith("#"):
+        h = highlight_hex.lstrip("#")
+        highlight_color = (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)
+    else:
+        highlight_color = (255, 217, 61, 255)  # #FFD93D
 
+    white = (255, 255, 255, 255)
+    stroke_color = (0, 0, 0, 255)
+    stroke_width = 3
+    pad_x, pad_y = 30, 18
+
+    font = _find_font(font_size)
+
+    # Group words into chunks
     groups = []
     for i in range(0, len(words), words_per_group):
         chunk = words[i : i + words_per_group]
         groups.append({
             "words": chunk,
-            "text": " ".join(w["word"] for w in chunk),
+            "text": " ".join(w["word"].upper() for w in chunk),
             "start": float(chunk[0]["start"]),
             "end": float(chunk[-1]["end"]),
         })
@@ -95,53 +134,64 @@ def _render_subtitle_frames(
     frame_map = {}
 
     for group in groups:
-        start_frame = int(group["start"] * fps)
-        end_frame = int(group["end"] * fps)
+        group_words = group["words"]
+        text_upper = group["text"]
 
-        img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
-        draw = ImageDraw.Draw(img)
-
-        text = group["text"]
-        bbox = draw.textbbox((0, 0), text, font=font)
+        # Measure full text to compute background box
+        measure_img = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+        measure_draw = ImageDraw.Draw(measure_img)
+        bbox = measure_draw.textbbox((0, 0), text_upper, font=font)
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
 
-        pad_x, pad_y = 24, 14
         box_w = text_w + pad_x * 2
         box_h = text_h + pad_y * 2
         box_x = (video_width - box_w) // 2
         box_y = int(video_height * position_y_pct / 100) - box_h // 2
 
-        draw.rounded_rectangle(
-            [(box_x, box_y), (box_x + box_w, box_y + box_h)],
-            radius=14,
-            fill=(0, 0, 0, 170),
-        )
+        # Generate one frame per word in the group (word-by-word highlight)
+        for wi, w in enumerate(group_words):
+            word_start = int(float(w["start"]) * fps)
+            word_end = int(float(w["end"]) * fps)
 
-        text_x = box_x + pad_x
-        text_y = box_y + pad_y
+            img = Image.new("RGBA", (video_width, video_height), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(img)
 
-        cursor_x = text_x
-        for wi, w in enumerate(group["words"]):
-            word = w["word"]
-            w_bbox = draw.textbbox((0, 0), word, font=font)
-            w_width = w_bbox[2] - w_bbox[0]
-
-            draw.text(
-                (cursor_x, text_y), word, font=font,
-                fill=(255, 255, 255, 255),
-                stroke_width=2, stroke_fill=(0, 0, 0, 255),
+            # Semi-transparent rounded background
+            draw.rounded_rectangle(
+                [(box_x, box_y), (box_x + box_w, box_y + box_h)],
+                radius=14,
+                fill=(0, 0, 0, 180),
             )
-            cursor_x += w_width
 
-            space_bbox = draw.textbbox((0, 0), " ", font=font)
-            cursor_x += space_bbox[2] - space_bbox[0]
+            # Draw each word — active word in highlight color, others in white
+            cursor_x = box_x + pad_x
+            text_y = box_y + pad_y
 
-        frame_path = os.path.join(output_dir, f"sub_{start_frame:06d}.png")
-        img.save(frame_path)
+            for wj, ww in enumerate(group_words):
+                word_text = ww["word"].upper()
+                fill = highlight_color if wj == wi else white
 
-        for f_idx in range(start_frame, min(end_frame + 1, total_frames)):
-            frame_map[f_idx] = frame_path
+                draw.text(
+                    (cursor_x, text_y), word_text, font=font,
+                    fill=fill,
+                    stroke_width=stroke_width, stroke_fill=stroke_color,
+                )
+
+                w_bbox = measure_draw.textbbox((0, 0), word_text, font=font)
+                w_width = w_bbox[2] - w_bbox[0]
+                cursor_x += w_width
+
+                # Add space between words
+                if wj < len(group_words) - 1:
+                    space_bbox = measure_draw.textbbox((0, 0), " ", font=font)
+                    cursor_x += space_bbox[2] - space_bbox[0]
+
+            frame_path = os.path.join(output_dir, f"sub_{word_start:06d}_w{wi}.png")
+            img.save(frame_path)
+
+            for f_idx in range(word_start, min(word_end + 1, total_frames)):
+                frame_map[f_idx] = frame_path
 
     concat_file = os.path.join(output_dir, "subs_concat.txt")
     with open(concat_file, "w") as f:

@@ -32,15 +32,17 @@ voice:
   pitch: "-2Hz"
 
 captions:
-  highlight_color: "&H0000D7FF"  # Or/ambre
+  style: hormozi
+  highlight_color: "&H0000D7FF"  # Or/ambre en ASS (BGR format)
+  highlight_color_hex: "#FFD93D"  # Jaune pour Pillow renderer
   base_color: "&H00FFFFFF"
   outline_color: "&H00000000"
   font: Arial
-  font_size: 18
+  font_size: 72
   bold: true
   outline_width: 3
-  words_per_group: 4
-  position_y: 85
+  words_per_group: 2
+  position_y: 45
 
 music:
   volume_normal: 0.12

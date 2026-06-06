@@ -32,15 +32,17 @@ voice:
   pitch: "-3Hz"
 
 captions:
-  highlight_color: "&H000045FF"  # Rouge orangé
+  style: hormozi
+  highlight_color: "&H000045FF"  # Rouge orangé en ASS (BGR format)
+  highlight_color_hex: "#FFD93D"  # Jaune pour Pillow renderer
   base_color: "&H00FFFFFF"
   outline_color: "&H00000000"
   font: Arial
-  font_size: 20
+  font_size: 72
   bold: true
   outline_width: 3
   words_per_group: 3
-  position_y: 85
+  position_y: 45
 
 music:
   volume_normal: 0.18
