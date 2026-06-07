@@ -380,12 +380,18 @@ def generate_script(
 ) -> VideoScript:
     system, user = _build_prompts(topic, niche, research_context)
 
-    if provider == "openai":
-        text = _call_openai(system, user, niche)
-    else:
-        text = _call_anthropic(system, user, niche)
+    call = _call_openai if provider == "openai" else _call_anthropic
+    text = call(system, user, niche)
 
-    data = _parse_script_json(text)
+    try:
+        data = _parse_script_json(text)
+    except ValueError:
+        if research_context:
+            system, user = _build_prompts(topic, niche, "")
+            text = call(system, user, niche)
+            data = _parse_script_json(text)
+        else:
+            raise
 
     return VideoScript(**data)
 

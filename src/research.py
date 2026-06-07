@@ -3,10 +3,38 @@
 from duckduckgo_search import DDGS
 
 
+def _extract_keywords(topic: str) -> str:
+    """Extract meaningful search keywords from a conversational topic."""
+    import re
+    stop_words = {
+        "le", "la", "les", "un", "une", "des", "du", "de", "en", "et",
+        "est", "son", "sa", "ses", "ton", "ta", "tes", "peut", "qui",
+        "que", "dans", "sur", "par", "pour", "avec", "sans", "ce", "cette",
+        "the", "a", "an", "is", "can", "your", "in", "on", "to", "and",
+    }
+    words = re.findall(r'[a-zà-ÿ0-9]+', topic.lower())
+    keywords = [w for w in words if w not in stop_words and len(w) > 1]
+    return " ".join(keywords)
+
+
+def _is_relevant(result: dict, topic: str) -> bool:
+    """Check if a search result is topically relevant to the query."""
+    import re
+    topic_words = set(re.findall(r'[a-zà-ÿ]{3,}', topic.lower()))
+    text = f"{result.get('title', '')} {result.get('snippet', '')}".lower()
+    matches = sum(1 for w in topic_words if w in text)
+    return matches >= 1
+
+
 def search_topic(topic: str, max_results: int = 8) -> list[dict]:
-    with DDGS() as ddgs:
-        results = list(ddgs.text(topic, max_results=max_results))
-    return [
+    query = _extract_keywords(topic)
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results * 2))
+    except Exception:
+        return []
+
+    all_results = [
         {
             "title": r.get("title", ""),
             "snippet": r.get("body", "")[:300],
@@ -14,6 +42,8 @@ def search_topic(topic: str, max_results: int = 8) -> list[dict]:
         }
         for r in results
     ]
+    relevant = [r for r in all_results if _is_relevant(r, topic)]
+    return relevant[:max_results] if relevant else all_results[:max_results]
 
 
 _RESEARCH_HEADERS = {
