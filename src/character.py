@@ -54,18 +54,26 @@ def generate_wojak_set(assets_dir: str, emotions: list[str] | None = None) -> di
         prompt = WOJAK_PROMPTS.get(emotion, WOJAK_PROMPTS["neutral"])
 
         if i > 0:
-            time.sleep(12)
+            time.sleep(15)
 
-        output = replicate.run(
-            "black-forest-labs/flux-schnell",
-            input={
-                "prompt": prompt,
-                "width": 512,
-                "height": 512,
-                "num_outputs": 1,
-                "output_format": "png",
-            },
-        )
+        for attempt in range(3):
+            try:
+                output = replicate.run(
+                    "black-forest-labs/flux-schnell",
+                    input={
+                        "prompt": prompt,
+                        "width": 512,
+                        "height": 512,
+                        "num_outputs": 1,
+                        "output_format": "png",
+                    },
+                )
+                break
+            except Exception as e:
+                if "429" in str(e) and attempt < 2:
+                    time.sleep(30 * (attempt + 1))
+                    continue
+                raise
 
         url = str(output[0]) if isinstance(output, list) else str(output)
         resp = httpx.get(url, follow_redirects=True, timeout=60)

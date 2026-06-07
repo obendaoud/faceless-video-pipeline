@@ -255,6 +255,8 @@ def stage_images(state: dict, niche: dict) -> dict:
 
         assets_dir = os.path.join("assets", "characters", char_type)
         emotions = [s.emotion for s in script.scenes]
+        import time
+        time.sleep(15)
         generate_wojak_set(assets_dir, emotions)
 
         overlay_dir = os.path.join(images_dir, "with_character")

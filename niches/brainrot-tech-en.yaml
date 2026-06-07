@@ -1,0 +1,82 @@
+name: Brainrot Tech (EN)
+description: Ultra-viral brainrot tech content — absurd, fast, addictive
+
+script:
+  language: en
+  style: brainrot
+  tone: "hyped, absurd, meme energy, unhinged"
+  hooks:
+    - "Shocking statement + nobody's talking about it"
+    - "This thing is SO broken that..."
+    - "You won't believe what happens when..."
+  cta_style: "Question that haunts the viewer"
+  forbidden:
+    - "teacher tone"
+    - "sentences > 10 words"
+    - "soft transitions"
+    - "wise conclusions"
+  max_scenes: 6
+  duration_target: "35-45 seconds"
+
+visuals:
+  model: black-forest-labs/flux-schnell
+  width: 768
+  height: 1344
+  rate_limit_seconds: 12
+  style: "extreme close-up, neon cyberpunk, glitch art, saturated colors, meme aesthetic, dramatic lighting, over-the-top digital art"
+  subjects:
+    - "distorted tech imagery"
+    - "glowing neon circuits"
+    - "exploding devices"
+    - "chaotic digital landscapes"
+  color_palette: ["#FF0040", "#00FF88", "#FF00FF", "#00DDFF"]
+  avoid: ["human faces", "text in image", "brand logos"]
+
+voice:
+  primary: en-US-GuyNeural
+  fallback: en-US-JennyNeural
+  rate: "+15%"
+  pitch: "+2Hz"
+
+captions:
+  style: hormozi
+  highlight_color_hex: "#FF0040"
+  base_color: "&H00FFFFFF"
+  outline_color: "&H00000000"
+  font_size: 80
+  bold: true
+  outline_width: 4
+  words_per_group: 2
+  position_y: 45
+
+music:
+  volume_normal: 0.20
+  volume_ducked: 0.06
+  fade_in: 0.3
+  fade_out: 0.5
+
+character:
+  enabled: true
+  type: wojak
+  position: bottom-right
+  scale: 0.30
+
+llm:
+  model: claude-haiku-4-5-20251001
+  max_tokens: 2048
+  temperature: 1.0
+
+video:
+  crf: 23
+  fps: 30
+  width: 1080
+  height: 1920
+
+upload:
+  category_id: "28"
+  privacy: private
+
+topics:
+  sources:
+    - reddit: ["technology", "hacking", "cybersecurity", "ProgrammerHumor"]
+  keywords: ["hack", "broken", "insane", "AI", "bug", "exploit", "vulnerability"]
