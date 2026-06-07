@@ -37,6 +37,8 @@ voice:
   fallback: fr-FR-DeniseNeural
   rate: "+15%"
   pitch: "+2Hz"
+  elevenlabs_voice_id: YwEKgPNrswweXodAZi29
+  elevenlabs_voice_name: Landry (African Male 25yo)
 
 captions:
   style: hormozi

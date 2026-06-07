@@ -62,6 +62,14 @@ def generate_audio(
 
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
 
+    prefer_elevenlabs = cfg.get("elevenlabs_voice_id") and os.environ.get("ELEVENLABS_API_KEY")
+
+    if prefer_elevenlabs:
+        try:
+            return _elevenlabs_tts(text, output_path, cfg)
+        except Exception:
+            pass
+
     try:
         asyncio.run(_edge_tts(text, voice, rate, pitch, output_path))
         return output_path
@@ -74,7 +82,7 @@ def generate_audio(
     except Exception:
         pass
 
-    if os.environ.get("ELEVENLABS_API_KEY"):
+    if not prefer_elevenlabs and os.environ.get("ELEVENLABS_API_KEY"):
         try:
             return _elevenlabs_tts(text, output_path, cfg)
         except Exception:
