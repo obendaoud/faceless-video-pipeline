@@ -40,8 +40,10 @@ def load_state(project_dir: str) -> dict | None:
 def save_state(state: dict, project_dir: str) -> None:
     os.makedirs(project_dir, exist_ok=True)
     path = os.path.join(project_dir, "state.json")
-    with open(path, "w", encoding="utf-8") as f:
-        json.dump(state, f, ensure_ascii=False, indent=2)
+    tmp_path = path + ".tmp"
+    with open(tmp_path, "w", encoding="utf-8") as f:
+        json.dump(state, f, ensure_ascii=False, indent=2, default=str)
+    os.replace(tmp_path, path)
 
 
 def start_stage(state: dict, stage: str) -> dict:

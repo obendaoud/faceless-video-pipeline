@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import anthropic
 from pydantic import BaseModel
 
@@ -343,6 +344,34 @@ def _build_prompts(topic: str, niche: dict, research: str) -> tuple[str, str]:
     return system, user
 
 
+def _parse_script_json(text: str) -> dict:
+    """Parse JSON from LLM response, handling markdown code fences."""
+    # Try direct JSON parse first
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Try extracting from markdown code fence
+    match = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            pass
+
+    # Fallback: find first { to last }
+    start = text.find("{")
+    end = text.rfind("}")
+    if start != -1 and end != -1 and end > start:
+        try:
+            return json.loads(text[start:end + 1])
+        except json.JSONDecodeError:
+            pass
+
+    raise ValueError(f"Could not parse JSON from LLM response: {text[:200]}...")
+
+
 def generate_script(
     topic: str,
     niche: dict,
@@ -356,9 +385,7 @@ def generate_script(
     else:
         text = _call_anthropic(system, user, niche)
 
-    start = text.find("{")
-    end = text.rfind("}") + 1
-    data = json.loads(text[start:end])
+    data = _parse_script_json(text)
 
     return VideoScript(**data)
 

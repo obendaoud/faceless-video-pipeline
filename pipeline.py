@@ -4,6 +4,7 @@ Pipeline semi-automatique de création de vidéos faceless.
 Research → Script → Images → TTS → Captions (Whisper) → Assemblage FFmpeg → Upload
 """
 
+import argparse
 import os
 import sys
 import glob
@@ -498,6 +499,14 @@ def _display_script(script):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Faceless video pipeline")
+    parser.add_argument("topic", nargs="?", default=None, help="Video topic")
+    parser.add_argument("--niche", default="tech", help="Niche profile name")
+    parser.add_argument("--resume", metavar="DIR", help="Resume from project directory")
+    parser.add_argument("--no-brief", action="store_true", help="Skip interactive brief")
+    parser.add_argument("--lang", default=None, help="Override language (fr/en/es/ar)")
+    args = parser.parse_args()
+
     console.print(
         Panel(
             "[bold white]Pipeline Vidéo Faceless v2[/bold white]\n"
@@ -509,52 +518,27 @@ def main():
     brief = None
 
     # Resume support
-    if "--resume" in sys.argv:
-        idx = sys.argv.index("--resume")
-        project_dir = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else None
-        if project_dir:
-            state = load_state(project_dir)
-            if state:
-                resume = get_resume_stage(state)
-                console.print(f"[yellow]Reprise depuis l'étape: {resume}[/yellow]")
-                brief = state.get("brief")
-            else:
-                console.print("[red]Aucun état trouvé dans ce dossier.[/red]")
-                sys.exit(1)
+    if args.resume:
+        state = load_state(args.resume)
+        if state:
+            resume = get_resume_stage(state)
+            console.print(f"[yellow]Reprise depuis l'étape: {resume}[/yellow]")
+            brief = state.get("brief")
         else:
-            console.print("[red]Spécifie le dossier: --resume output/xxx[/red]")
+            console.print("[red]Aucun état trouvé dans ce dossier.[/red]")
             sys.exit(1)
 
-        if "--niche" in sys.argv:
-            niche_idx = sys.argv.index("--niche")
-            niche_name = sys.argv[niche_idx + 1] if niche_idx + 1 < len(sys.argv) else "tech"
-        else:
-            niche_name = state.get("niche", "tech")
+        niche_name = args.niche if args.niche != "tech" else state.get("niche", "tech")
         niche = load_niche(niche_name)
     else:
-        # Check for topic in CLI args
-        args = [a for a in sys.argv[1:] if not a.startswith("--")]
-        has_topic = bool(args)
-        no_brief = "--no-brief" in sys.argv
-
-        if has_topic or no_brief:
-            # Direct mode: topic from CLI or prompt, niche from --niche or prompt
-            if has_topic:
-                topic = " ".join(args)
+        if args.topic or args.no_brief:
+            # Direct mode: topic from CLI or prompt
+            if args.topic:
+                topic = args.topic
             else:
                 topic = Prompt.ask("\n[bold]Sujet de la vidéo[/bold]")
 
-            if "--niche" in sys.argv:
-                niche_idx = sys.argv.index("--niche")
-                niche_name = sys.argv[niche_idx + 1] if niche_idx + 1 < len(sys.argv) else "tech"
-            else:
-                available = [
-                    os.path.splitext(os.path.basename(f))[0]
-                    for f in sorted(glob.glob("niches/*.yaml"))
-                ]
-                niche_name = Prompt.ask(
-                    f"[bold]Niche[/bold] ({', '.join(available)})", default="tech"
-                )
+            niche_name = args.niche
         else:
             # Interactive brief mode
             brief = interactive_brief()
@@ -566,13 +550,18 @@ def main():
             sys.exit(1)
 
         niche = load_niche(niche_name)
+
+        # Apply --lang override to niche config
+        if args.lang:
+            niche.setdefault("script", {})["language"] = args.lang
+
         console.print(f"[dim]Niche: {niche['name']}[/dim]")
 
         project_dir = get_project_dir(topic)
         state = init_state(project_dir, topic, niche_name)
         if brief:
             state["brief"] = brief
-            save_state(state)
+            save_state(state, project_dir)
         console.print(f"[dim]Projet: {project_dir}[/dim]")
 
     # Run stages (skip completed ones)
