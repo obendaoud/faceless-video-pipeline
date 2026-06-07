@@ -34,7 +34,7 @@ from src.state import (
     get_resume_stage, is_stage_done,
 )
 
-load_dotenv()
+load_dotenv(override=True)
 console = Console()
 
 
