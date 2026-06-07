@@ -67,6 +67,74 @@ def find_music() -> str | None:
     return random.choice(files) if files else None
 
 
+# ── Interactive brief ──────────────────────────────────────────
+
+
+def interactive_brief() -> dict:
+    """Ask QCM questions to build a creative brief for script generation."""
+    console.print("\n[bold magenta]═══ BRIEF CRÉATIF ═══[/bold magenta]\n")
+
+    brief = {}
+
+    # 1. Topic (free text)
+    brief["topic"] = Prompt.ask("[bold]Sujet de la vidéo[/bold]")
+
+    # 2. Angle
+    console.print("\n[bold]Angle narratif:[/bold]")
+    console.print("  1. Informatif — expliquer clairement")
+    console.print("  2. Parodique — humour et satire")
+    console.print("  3. Alarmiste — danger et urgence")
+    console.print("  4. Inspirant — motivation et solutions")
+    angle_choice = Prompt.ask("Choix", choices=["1", "2", "3", "4"], default="2")
+    brief["angle"] = {"1": "informatif", "2": "parodique", "3": "alarmiste", "4": "inspirant"}[angle_choice]
+
+    # 3. Target audience
+    console.print("\n[bold]Audience cible:[/bold]")
+    console.print("  1. Tech-savvy — connaisseurs tech")
+    console.print("  2. Grand public — tout le monde")
+    console.print("  3. Professionnels — experts du domaine")
+    target_choice = Prompt.ask("Choix", choices=["1", "2", "3"], default="2")
+    brief["target"] = {"1": "tech-savvy", "2": "grand public", "3": "professionnels"}[target_choice]
+
+    # 4. Dominant emotion
+    console.print("\n[bold]Émotion dominante:[/bold]")
+    console.print("  1. Curiosité")
+    console.print("  2. Peur")
+    console.print("  3. Émerveillement")
+    console.print("  4. Indignation")
+    emotion_choice = Prompt.ask("Choix", choices=["1", "2", "3", "4"], default="1")
+    brief["emotion"] = {"1": "curiosité", "2": "peur", "3": "émerveillement", "4": "indignation"}[emotion_choice]
+
+    # 5. Hook (free text or auto)
+    brief["hook"] = Prompt.ask("[bold]Hook d'ouverture[/bold] (ou 'auto')", default="auto")
+
+    # 6. Language
+    console.print("\n[bold]Langue:[/bold]")
+    console.print("  1. Français")
+    console.print("  2. English")
+    console.print("  3. Español")
+    console.print("  4. العربية")
+    lang_choice = Prompt.ask("Choix", choices=["1", "2", "3", "4"], default="1")
+    brief["language"] = {"1": "fr", "2": "en", "3": "es", "4": "ar"}[lang_choice]
+
+    # 7. Niche
+    available = [
+        os.path.splitext(os.path.basename(f))[0]
+        for f in sorted(glob.glob("niches/*.yaml"))
+    ]
+    console.print(f"\n[bold]Niche:[/bold] {', '.join(available)}")
+    brief["niche"] = Prompt.ask("Choix", choices=available, default="tech")
+
+    console.print(Panel(
+        f"Sujet: {brief['topic']}\nAngle: {brief['angle']}\nCible: {brief['target']}\n"
+        f"Émotion: {brief['emotion']}\nHook: {brief['hook']}\nLangue: {brief['language']}\nNiche: {brief['niche']}",
+        title="[bold green]Brief créatif[/bold green]",
+        border_style="green",
+    ))
+
+    return brief
+
+
 # ── Stage handlers ──────────────────────────────────────────────
 
 
@@ -93,7 +161,7 @@ def stage_research(state: dict, niche: dict) -> dict:
     return state
 
 
-def stage_script(state: dict, niche: dict) -> dict:
+def stage_script(state: dict, niche: dict, brief: dict | None = None) -> dict:
     console.print("\n[bold cyan]═══ ÉTAPE 2/6: Génération du script ═══[/bold cyan]\n")
 
     script_path = os.path.join(state["project_dir"], "script.json")
@@ -105,6 +173,15 @@ def stage_script(state: dict, niche: dict) -> dict:
 
     start_stage(state, "script")
     research = state.get("artifacts", {}).get("research_context", "")
+
+    # Inject brief context into research if available
+    if brief is None:
+        brief = state.get("brief")
+    if brief:
+        brief_context = f"\n\nBRIEF CRÉATIF:\n- Angle: {brief['angle']}\n- Cible: {brief['target']}\n- Émotion dominante: {brief['emotion']}"
+        if brief.get("hook") and brief["hook"] != "auto":
+            brief_context += f"\n- Hook imposé: {brief['hook']}"
+        research = research + brief_context
 
     console.print(f"[dim]Génération via Claude...[/dim]")
     try:
@@ -429,22 +506,7 @@ def main():
         )
     )
 
-    available = [
-        os.path.splitext(os.path.basename(f))[0]
-        for f in sorted(glob.glob("niches/*.yaml"))
-    ]
-    niche_choices = ", ".join(available)
-
-    if "--niche" in sys.argv:
-        idx = sys.argv.index("--niche")
-        niche_name = sys.argv[idx + 1] if idx + 1 < len(sys.argv) else "tech"
-    else:
-        niche_name = Prompt.ask(
-            f"[bold]Niche[/bold] ({niche_choices})", default="tech"
-        )
-
-    niche = load_niche(niche_name)
-    console.print(f"[dim]Niche: {niche['name']}[/dim]")
+    brief = None
 
     # Resume support
     if "--resume" in sys.argv:
@@ -455,32 +517,69 @@ def main():
             if state:
                 resume = get_resume_stage(state)
                 console.print(f"[yellow]Reprise depuis l'étape: {resume}[/yellow]")
+                brief = state.get("brief")
             else:
                 console.print("[red]Aucun état trouvé dans ce dossier.[/red]")
                 sys.exit(1)
         else:
             console.print("[red]Spécifie le dossier: --resume output/xxx[/red]")
             sys.exit(1)
-    else:
-        args = [a for a in sys.argv[1:] if not a.startswith("--")]
-        if args:
-            topic = " ".join(args)
+
+        if "--niche" in sys.argv:
+            niche_idx = sys.argv.index("--niche")
+            niche_name = sys.argv[niche_idx + 1] if niche_idx + 1 < len(sys.argv) else "tech"
         else:
-            topic = Prompt.ask("\n[bold]Sujet de la vidéo[/bold]")
+            niche_name = state.get("niche", "tech")
+        niche = load_niche(niche_name)
+    else:
+        # Check for topic in CLI args
+        args = [a for a in sys.argv[1:] if not a.startswith("--")]
+        has_topic = bool(args)
+        no_brief = "--no-brief" in sys.argv
+
+        if has_topic or no_brief:
+            # Direct mode: topic from CLI or prompt, niche from --niche or prompt
+            if has_topic:
+                topic = " ".join(args)
+            else:
+                topic = Prompt.ask("\n[bold]Sujet de la vidéo[/bold]")
+
+            if "--niche" in sys.argv:
+                niche_idx = sys.argv.index("--niche")
+                niche_name = sys.argv[niche_idx + 1] if niche_idx + 1 < len(sys.argv) else "tech"
+            else:
+                available = [
+                    os.path.splitext(os.path.basename(f))[0]
+                    for f in sorted(glob.glob("niches/*.yaml"))
+                ]
+                niche_name = Prompt.ask(
+                    f"[bold]Niche[/bold] ({', '.join(available)})", default="tech"
+                )
+        else:
+            # Interactive brief mode
+            brief = interactive_brief()
+            topic = brief["topic"]
+            niche_name = brief["niche"]
 
         if not topic.strip():
             console.print("[red]Aucun sujet fourni.[/red]")
             sys.exit(1)
 
+        niche = load_niche(niche_name)
+        console.print(f"[dim]Niche: {niche['name']}[/dim]")
+
         project_dir = get_project_dir(topic)
         state = init_state(project_dir, topic, niche_name)
+        if brief:
+            state["brief"] = brief
+            save_state(state)
         console.print(f"[dim]Projet: {project_dir}[/dim]")
 
     # Run stages (skip completed ones)
     if not is_stage_done(state, "research"):
         stage_research(state, niche)
     if not is_stage_done(state, "script"):
-        stage_script(state, niche)
+        stage_script(state, niche, brief)
     if not is_stage_done(state, "images"):
         stage_images(state, niche)
     if not is_stage_done(state, "audio"):
