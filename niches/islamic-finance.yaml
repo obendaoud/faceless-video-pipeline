@@ -1,0 +1,77 @@
+name: Finance Islamique
+description: Halal investing, zakat, sukuk, Islamic banking
+
+script:
+  language: ar
+  tone: "authoritative, accessible, trustworthy, educational"
+  hooks:
+    - "Surprising fact about Islamic finance"
+    - "Common halal investing mistake"
+    - "Comparison: conventional vs Islamic finance"
+  cta_style: "Share with someone who needs this"
+  forbidden:
+    - "personalized investment advice"
+    - "guaranteed returns"
+    - "criticism of specific scholars"
+  max_scenes: 6
+  duration_target: "45-55 seconds"
+
+visuals:
+  style: "clean financial infographic, Islamic geometric patterns, dark premium background, gold accents"
+  subjects:
+    - "financial charts and graphs"
+    - "Islamic geometric art"
+    - "banking interfaces"
+    - "gold and finance symbols"
+  color_palette: ["#D4AF37", "#1B4332", "#2D6A4F", "#F5F5DC"]
+  avoid: ["human faces", "text in image", "brand logos", "religious symbols"]
+  model: black-forest-labs/flux-schnell
+  width: 768
+  height: 1344
+  rate_limit_seconds: 12
+
+voice:
+  primary: ar-EG-ShakirNeural
+  fallback: ar-SA-HamedNeural
+  rate: "+0%"
+  pitch: "+0Hz"
+
+captions:
+  style: hormozi
+  highlight_color: "&H0000D4FF"
+  highlight_color_hex: "#D4AF37"
+  base_color: "&H00FFFFFF"
+  outline_color: "&H00000000"
+  font_size: 72
+  bold: true
+  outline_width: 3
+  words_per_group: 2
+  position_y: 45
+
+music:
+  volume_normal: 0.12
+  volume_ducked: 0.03
+  fade_in: 0.5
+  fade_out: 1.0
+
+character:
+  enabled: false
+
+llm:
+  model: claude-haiku-4-5-20251001
+  max_tokens: 2048
+
+video:
+  crf: 23
+  fps: 30
+  width: 1080
+  height: 1920
+
+upload:
+  category_id: "28"
+  privacy: private
+
+topics:
+  sources:
+    - reddit: ["islamicfinance", "halal", "muslimfinance"]
+  keywords: ["halal", "sukuk", "zakat", "Islamic banking", "Shariah compliant"]

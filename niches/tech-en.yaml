@@ -1,0 +1,88 @@
+name: Tech & Tutorials
+description: Tech tips, AI tools, productivity, reviews
+
+script:
+  language: en
+  tone: "engaging, clear, dynamic, accessible"
+  hooks:
+    - "Provocative question about a tool or technique"
+    - "Surprising tech fact or statistic"
+    - "Immediate value promise"
+  cta_style: "Subscribe for more tech tips"
+  forbidden:
+    - "unexplained technical jargon"
+    - "unverified claims"
+    - "unrealistic promises"
+  max_scenes: 6
+  duration_target: "45-55 seconds"
+
+llm:
+  model: claude-haiku-4-5-20251001
+  max_tokens: 2048
+  temperature: 0.8
+
+visuals:
+  model: black-forest-labs/flux-schnell
+  width: 768
+  height: 1344
+  rate_limit_seconds: 12
+  style: "modern digital illustration, clean UI mockup, tech aesthetic, gradient background, minimal"
+  subjects:
+    - "software interfaces"
+    - "tech devices"
+    - "conceptual diagrams"
+    - "tech icons and symbols"
+  color_palette: ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981"]
+  avoid: ["human faces", "text in image", "brand logos"]
+
+voice:
+  primary: en-US-GuyNeural
+  fallback: en-US-JennyNeural
+  rate: "+5%"
+  pitch: "+0Hz"
+
+captions:
+  style: hormozi
+  highlight_color: "&H0000FFFF"
+  highlight_color_hex: "#FFD93D"
+  base_color: "&H00FFFFFF"
+  outline_color: "&H00000000"
+  font: Arial
+  font_size: 72
+  bold: true
+  outline_width: 3
+  words_per_group: 2
+  position_y: 45
+
+music:
+  volume_normal: 0.15
+  volume_ducked: 0.04
+  fade_in: 0.5
+  fade_out: 1.0
+
+video:
+  crf: 23
+  fps: 30
+  width: 1080
+  height: 1920
+
+upload:
+  category_id: "28"
+  privacy: private
+
+thumbnail:
+  style: "bold text overlay on gradient background"
+  text_color: white
+  shadow: true
+
+character:
+  enabled: true
+  type: wojak
+  position: bottom-right
+  scale: 0.30
+
+topics:
+  sources:
+    - reddit: ["technology", "artificial", "productivity"]
+    - rss: ["https://techcrunch.com/feed/"]
+  keywords: ["AI", "productivity", "free", "tool", "hack", "alternative"]

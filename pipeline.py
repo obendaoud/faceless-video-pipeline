@@ -20,10 +20,12 @@ from rich.prompt import Prompt, Confirm
 
 from src.research import research_for_script
 from src.script_generator import generate_script, save_script, load_script
+from src.script_validator import validate_script
 from src.image_generator import generate_all_images
 from src.tts_generator import generate_audio
 from src.captions import generate_captions
 from src.video_assembler import assemble_video
+from src.thumbnail import generate_thumbnails
 from src.uploader import upload_video
 from src.state import (
     init_state, load_state, save_state,
@@ -75,8 +77,10 @@ def stage_research(state: dict, niche: dict) -> dict:
     topic = state["topic"]
     console.print(f"[dim]Recherche DuckDuckGo pour: {topic}...[/dim]")
 
+    language = niche.get("script", {}).get("language", "fr")
+
     try:
-        context = research_for_script(topic)
+        context = research_for_script(topic, language=language)
         lines = [l for l in context.split("\n") if l.strip() and not l.startswith("===")]
         console.print(f"[green]{len(lines)} résultats trouvés[/green]")
         for line in lines[:6]:
@@ -111,6 +115,12 @@ def stage_script(state: dict, niche: dict) -> dict:
         sys.exit(1)
 
     _display_script(script)
+
+    validation = validate_script(script, niche)
+    score_color = "green" if validation["score"] >= 70 else "yellow" if validation["score"] >= 50 else "red"
+    console.print(f"\n[{score_color}]Score qualité: {validation['score']}/100[/{score_color}]")
+    for w in validation["warnings"]:
+        console.print(f"  [yellow]- {w}[/yellow]")
 
     if not Confirm.ask("\n[bold]Valider ce script?[/bold]"):
         console.print("[yellow]Relance le pipeline pour un nouveau script.[/yellow]")
@@ -313,6 +323,11 @@ def stage_assembly(state: dict, niche: dict) -> dict:
             words=words,
             niche_captions=niche.get("captions"),
             scenes=scenes,
+            watermark=niche.get("watermark"),
+            branding=niche.get("branding"),
+            title=script.title,
+            cta=script.cta,
+            color_palette=niche.get("visuals", {}).get("color_palette"),
         )
     except Exception as e:
         fail_stage(state, "assembly", str(e))
@@ -320,7 +335,23 @@ def stage_assembly(state: dict, niche: dict) -> dict:
         sys.exit(1)
 
     console.print(f"\n[bold green]Vidéo créée: {result}[/bold green]")
-    complete_stage(state, "assembly", {"video_path": result})
+
+    console.print("[dim]Génération des thumbnails A/B...[/dim]")
+    try:
+        thumbs = generate_thumbnails(
+            script, state["artifacts"]["image_paths"],
+            state["project_dir"], niche,
+        )
+        for t in thumbs:
+            console.print(f"  [green]{os.path.basename(t)}[/green]")
+    except Exception as e:
+        console.print(f"[yellow]Thumbnails échouées: {e}[/yellow]")
+        thumbs = []
+
+    artifacts = {"video_path": result}
+    if thumbs:
+        artifacts["thumbnail_paths"] = thumbs
+    complete_stage(state, "assembly", artifacts)
     return state
 
 
@@ -461,11 +492,17 @@ def main():
 
     stage_upload(state, niche)
 
+    thumb_info = ""
+    thumb_paths = state["artifacts"].get("thumbnail_paths", [])
+    if thumb_paths:
+        thumb_info = f"[white]Thumbnails:[/white] {', '.join(os.path.basename(t) for t in thumb_paths)}\n"
+
     console.print(
         Panel(
             f"[bold green]Pipeline terminé![/bold green]\n\n"
             f"[white]Vidéo:[/white] {state['artifacts'].get('video_path', 'N/A')}\n"
             f"[white]SRT:[/white] {state['artifacts'].get('srt_path', 'N/A')}\n"
+            f"{thumb_info}"
             f"[white]Projet:[/white] {state['project_dir']}\n\n"
             f"[dim]Pour reprendre un pipeline crashé: --resume {state['project_dir']}[/dim]",
             title="Résultat",

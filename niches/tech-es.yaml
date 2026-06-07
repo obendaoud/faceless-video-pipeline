@@ -1,0 +1,88 @@
+name: Tech & Tutoriales
+description: Tips tech, herramientas IA, productividad, reviews
+
+script:
+  language: es
+  tone: "atractivo, claro, dinamico, accesible"
+  hooks:
+    - "Pregunta provocativa sobre una herramienta o tecnica"
+    - "Dato sorprendente o estadistica tech"
+    - "Promesa de valor inmediato"
+  cta_style: "Suscribete para mas tips tech"
+  forbidden:
+    - "jerga tecnica sin explicar"
+    - "afirmaciones no verificadas"
+    - "promesas irrealistas"
+  max_scenes: 6
+  duration_target: "45-55 segundos"
+
+llm:
+  model: claude-haiku-4-5-20251001
+  max_tokens: 2048
+  temperature: 0.8
+
+visuals:
+  model: black-forest-labs/flux-schnell
+  width: 768
+  height: 1344
+  rate_limit_seconds: 12
+  style: "modern digital illustration, clean UI mockup, tech aesthetic, gradient background, minimal"
+  subjects:
+    - "interfaces de software"
+    - "dispositivos tech"
+    - "diagramas conceptuales"
+    - "iconos y simbolos tech"
+  color_palette: ["#6366f1", "#8b5cf6", "#06b6d4", "#10b981"]
+  avoid: ["rostros humanos", "texto en la imagen", "logos de marca"]
+
+voice:
+  primary: es-MX-JorgeNeural
+  fallback: es-MX-DaliaNeural
+  rate: "+5%"
+  pitch: "+0Hz"
+
+captions:
+  style: hormozi
+  highlight_color: "&H0000FFFF"
+  highlight_color_hex: "#FFD93D"
+  base_color: "&H00FFFFFF"
+  outline_color: "&H00000000"
+  font: Arial
+  font_size: 72
+  bold: true
+  outline_width: 3
+  words_per_group: 2
+  position_y: 45
+
+music:
+  volume_normal: 0.15
+  volume_ducked: 0.04
+  fade_in: 0.5
+  fade_out: 1.0
+
+video:
+  crf: 23
+  fps: 30
+  width: 1080
+  height: 1920
+
+upload:
+  category_id: "28"
+  privacy: private
+
+thumbnail:
+  style: "bold text overlay on gradient background"
+  text_color: white
+  shadow: true
+
+character:
+  enabled: true
+  type: wojak
+  position: bottom-right
+  scale: 0.30
+
+topics:
+  sources:
+    - reddit: ["technology", "artificial", "productivity"]
+    - rss: ["https://techcrunch.com/feed/"]
+  keywords: ["IA", "productividad", "gratis", "herramienta", "truco", "alternativa"]
