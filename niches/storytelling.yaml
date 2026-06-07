@@ -74,6 +74,12 @@ thumbnail:
   text_color: white
   shadow: true
 
+character:
+  enabled: true
+  type: wojak
+  position: bottom-right
+  scale: 0.30
+
 topics:
   sources:
     - reddit: ["todayilearned", "interestingasfuck", "askreddit"]

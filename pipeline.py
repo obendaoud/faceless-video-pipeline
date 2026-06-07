@@ -157,6 +157,29 @@ def stage_images(state: dict, niche: dict) -> dict:
         console.print(f"  [dim]{os.path.basename(p)}[/dim]")
     console.print(f"[green]{len(paths)} images générées[/green]")
 
+    # Character overlay (Wojak)
+    char_cfg = niche.get("character", {})
+    if char_cfg.get("enabled"):
+        from src.character import generate_wojak_set, overlay_all_scenes
+
+        char_type = char_cfg.get("type", "wojak")
+        console.print(f"[dim]Génération du personnage {char_type}...[/dim]")
+
+        assets_dir = os.path.join("assets", "characters", char_type)
+        emotions = [s.emotion for s in script.scenes]
+        generate_wojak_set(assets_dir, emotions)
+
+        overlay_dir = os.path.join(images_dir, "with_character")
+        paths = overlay_all_scenes(
+            image_paths=paths,
+            emotions=emotions,
+            output_dir=overlay_dir,
+            assets_dir=assets_dir,
+            position=char_cfg.get("position", "bottom-right"),
+            scale=char_cfg.get("scale", 0.30),
+        )
+        console.print("[green]Personnage ajouté aux scènes[/green]")
+
     if not Confirm.ask("\n[bold]Valider les images?[/bold] (vérifie dans le dossier)"):
         console.print("[yellow]Modifie les images puis relance.[/yellow]")
         sys.exit(0)
